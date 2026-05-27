@@ -1,0 +1,14 @@
+{
+  "name": "zenspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "ZenSpace dashboard with Spotify lyrics fallback proxy",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cheerio": "^1.0.0",
+    "express": "^4.21.2"
+  }
+}

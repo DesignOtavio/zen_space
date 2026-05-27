@@ -195,6 +195,7 @@
             font-size: 1.8rem;
             letter-spacing: -0.02em;
             background: linear-gradient(135deg, var(--text-primary), var(--accent-color));
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 0.3rem;
@@ -1522,6 +1523,176 @@
             text-align: right;
             font-family: var(--font-title);
         }
+
+        /* Controle de Progresso da Música */
+        .spotify-progress-row {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.5rem 0;
+            margin-top: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .spotify-progress-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            flex-grow: 1;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            outline: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .spotify-progress-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #1DB954;
+            cursor: pointer;
+            box-shadow: 0 0 6px rgba(29, 185, 84, 0.4);
+            transition: transform 0.15s ease;
+        }
+
+        .spotify-progress-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.3);
+        }
+
+        .spotify-time-label {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            min-width: 3rem;
+            text-align: center;
+            font-family: var(--font-title);
+            font-weight: 500;
+        }
+
+        /* Abas de Fila vs Letras */
+        .spotify-tabs-container {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .spotify-tab-btn {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-family: var(--font-title);
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s ease;
+            position: relative;
+            bottom: -1px;
+        }
+
+        .spotify-tab-btn svg {
+            width: 18px;
+            height: 18px;
+        }
+
+        .spotify-tab-btn:hover {
+            color: var(--text-primary);
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .spotify-tab-btn.active {
+            color: #1DB954;
+            border-bottom-color: #1DB954;
+        }
+
+        /* Painéis */
+        .spotify-panel {
+            min-height: 200px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        /* Conteúdo de Letras */
+        .spotify-lyrics-content {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            justify-content: center;
+            padding: 0.5rem 0;
+            min-height: 250px;
+            max-height: 400px;
+            overflow-y: auto;
+            scroll-behavior: smooth;
+        }
+
+        .spotify-lyrics-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .spotify-lyrics-content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .spotify-lyrics-content::-webkit-scrollbar-thumb {
+            background: rgba(29, 185, 84, 0.5);
+            border-radius: 3px;
+        }
+
+        .spotify-lyrics-content::-webkit-scrollbar-thumb:hover {
+            background: rgba(29, 185, 84, 0.8);
+        }
+
+        .spotify-lyric-line {
+            padding: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            min-height: 2.6rem;
+            line-height: 1.5;
+            opacity: 0.6;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .spotify-lyric-line.ghost {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .spotify-lyric-line.active {
+            color: #1DB954;
+            font-size: 1.1rem;
+            font-weight: 600;
+            opacity: 1;
+            background: rgba(29, 185, 84, 0.1);
+            border-radius: 6px;
+            transform: scale(1.05);
+        }
+
+        .spotify-lyrics-empty {
+            padding: 3rem 1rem;
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 
@@ -1888,6 +2059,13 @@
                                 </button>
                             </div>
 
+                            <!-- Controle de Progresso da Música -->
+                            <div class="spotify-progress-row">
+                                <span class="spotify-time-label" id="spotify-current-time">0:00</span>
+                                <input type="range" class="spotify-progress-slider" id="spotify-progress-slider" min="0" max="100" value="0" title="Posição da música">
+                                <span class="spotify-time-label" id="spotify-total-time">0:00</span>
+                            </div>
+
                             <!-- Controle de Volume -->
                             <div class="spotify-volume-row">
                                 <button class="spotify-mute-btn" id="spotify-mute-btn" title="Mutar/Desmutar">
@@ -1915,8 +2093,25 @@
                             </div>
                         </div>
 
+                        <!-- Abas: Fila vs Letras -->
+                        <div class="spotify-tabs-container">
+                            <button class="spotify-tab-btn active" data-tab="queue">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 7h14M3 12h10M3 17h18M19 5l4 4-4 4" />
+                                </svg>
+                                Fila
+                            </button>
+                            <button class="spotify-tab-btn" data-tab="lyrics">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+                                    <path d="M9 7h6M8 11h8M7 15h10" />
+                                </svg>
+                                Letras
+                            </button>
+                        </div>
+
                         <!-- Painel de Fila de Reprodução -->
-                        <div class="spotify-queue-panel">
+                        <div class="spotify-panel" id="spotify-queue-panel" data-panel="queue">
                             <div class="card-title">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M3 7h14M3 12h10M3 17h18" />
@@ -1926,6 +2121,20 @@
                             </div>
                             <div class="spotify-search-results" id="spotify-queue-list">
                                 <div class="todo-empty" style="padding: 1.5rem 0;">A fila está vazia. Adicione músicas para começar.</div>
+                            </div>
+                        </div>
+
+                        <!-- Painel de Letras Sincronizadas -->
+                        <div class="spotify-panel" id="spotify-lyrics-panel" data-panel="lyrics" style="display: none;">
+                            <div class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M4 3h16a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" />
+                                    <path d="M9 7h6M8 11h8M7 15h10" />
+                                </svg>
+                                Letras Sincronizadas
+                            </div>
+                            <div class="spotify-lyrics-content" id="spotify-lyrics-content">
+                                <div class="todo-empty" style="padding: 2rem 0;">Toque uma música para ver as letras sincronizadas</div>
                             </div>
                         </div>
 
@@ -2789,12 +2998,319 @@
             searchTimeout = setTimeout(executeSpotifySearch, 350);
         });
 
+        let spotifyCurrentTime = 0;
+        let spotifyTotalTime = 0;
+        let isSeekingSpotify = false;
+        let spotifyProgressInterval = null;
+
+        const spotifyProgressSlider = document.getElementById('spotify-progress-slider');
+        const spotifyCurrentTimeLabel = document.getElementById('spotify-current-time');
+        const spotifyTotalTimeLabel = document.getElementById('spotify-total-time');
+
+        function formatTime(ms) {
+            const totalSeconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(totalSeconds / 60);
+            const seconds = totalSeconds % 60;
+            return `${minutes}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function updateProgressUI(current, total) {
+            spotifyCurrentTime = current;
+            spotifyTotalTime = total;
+            spotifyCurrentTimeLabel.textContent = formatTime(current);
+            spotifyTotalTimeLabel.textContent = formatTime(total);
+            if (total > 0 && !isSeekingSpotify) {
+                const percentage = (current / total) * 100;
+                spotifyProgressSlider.value = percentage;
+            }
+        }
+
+        spotifyProgressSlider.addEventListener('input', (e) => {
+            isSeekingSpotify = true;
+            const percentage = parseInt(e.target.value);
+            const newTime = (percentage / 100) * spotifyTotalTime;
+            spotifyCurrentTime = newTime;
+            spotifyCurrentTimeLabel.textContent = formatTime(newTime);
+        });
+
+        spotifyProgressSlider.addEventListener('change', async (e) => {
+            const percentage = parseInt(e.target.value);
+            const newTime = (percentage / 100) * spotifyTotalTime;
+            const ms = Math.floor(newTime);
+
+            if (spotifyPlayer && spotifyDeviceId) {
+                await spotifyPlayer.seek(ms);
+            } else {
+                await spotifyApiFetch('/me/player/seek?position_ms=' + ms, 'PUT');
+            }
+            isSeekingSpotify = false;
+            setTimeout(fetchSpotifyPlayback, 300);
+        });
+
         let spotifyPollInterval = null;
         let isSpotifyPlaying = false;
         let activeSpotifyDevice = null;
         let spotifyQueue = JSON.parse(localStorage.getItem('spotify-queue') || '[]');
+        let spotifyLyricsCache = JSON.parse(localStorage.getItem('spotify-lyrics-cache') || '{}');
         const spotifyFallbackImage = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><rect width="100%" height="100%" fill="%23222"/></svg>';
 
+        // Variáveis para Letras Sincronizadas
+        let currentLyrics = []; // Array de {time: ms, text: string}
+        let currentLyricsIndex = -1;
+        let lyricsUpdateInterval = null;
+        let currentTrackIdentifier = ''; // Para evitar múltiplas buscas da mesma música
+        let currentTrackUri = '';
+        let queueAdvanceLocked = false;
+
+        // Elementos de Letras
+        const spotifyTabButtons = document.querySelectorAll('.spotify-tab-btn');
+        const spotifyPanels = document.querySelectorAll('.spotify-panel');
+        const spotifyLyricsContent = document.getElementById('spotify-lyrics-content');
+
+        // Sistema de Abas
+        spotifyTabButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                
+                // Remover active de todos os botões e painéis
+                spotifyTabButtons.forEach(b => b.classList.remove('active'));
+                spotifyPanels.forEach(p => p.style.display = 'none');
+                
+                // Adicionar active ao botão clicado
+                btn.classList.add('active');
+                
+                // Mostrar painel correspondente
+                const panel = document.querySelector(`[data-panel="${tabName}"]`);
+                if (panel) panel.style.display = 'block';
+            });
+        });
+
+        // Parsear formato LRC
+        function parseLRC(lrcText) {
+            const lines = [];
+            const lrcLines = lrcText.split('\n');
+            
+            for (const line of lrcLines) {
+                const matches = [...line.matchAll(/\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/g)];
+                if (!matches.length) {
+                    continue;
+                }
+
+                const text = line.replace(/\[(\d{2}):(\d{2})(?:\.(\d{2,3}))?\]/g, '').trim();
+                if (!text) {
+                    continue;
+                }
+
+                for (const match of matches) {
+                    const minutes = parseInt(match[1], 10);
+                    const seconds = parseInt(match[2], 10);
+                    const fractionRaw = match[3] || '0';
+                    const fraction = fractionRaw.length === 3 ? parseInt(fractionRaw, 10) : parseInt(fractionRaw.padEnd(3, '0'), 10);
+                    const timeMs = (minutes * 60 + seconds) * 1000 + fraction;
+                    lines.push({ time: timeMs, text });
+                }
+            }
+
+            return lines.sort((first, second) => first.time - second.time);
+        }
+
+        function getLyricsCacheKey(artist, track) {
+            return `${artist}|||${track}`.toLowerCase();
+        }
+
+        function persistLyricsCache() {
+            localStorage.setItem('spotify-lyrics-cache', JSON.stringify(spotifyLyricsCache));
+        }
+
+        function cacheLyrics(artist, track, lyrics, source) {
+            spotifyLyricsCache[getLyricsCacheKey(artist, track)] = {
+                lyrics,
+                source,
+                updatedAt: Date.now()
+            };
+            persistLyricsCache();
+        }
+
+        function readCachedLyrics(artist, track) {
+            return spotifyLyricsCache[getLyricsCacheKey(artist, track)] || null;
+        }
+
+        function resetLyricsState(message = 'Toque uma música para ver as letras sincronizadas') {
+            currentLyrics = [];
+            currentLyricsIndex = -1;
+            currentTrackIdentifier = '';
+            spotifyLyricsContent.innerHTML = `<div class="todo-empty" style="padding: 2rem 0;">${message}</div>`;
+        }
+
+        // Buscar letras na LRCLib
+        async function fetchLyricsFromLRCLib(artist, track) {
+            try {
+                const response = await fetch(`https://lrclib.net/api/search?artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}`);
+                
+                if (!response.ok) return null;
+                
+                const data = await response.json();
+                if (data.length === 0) return null;
+                
+                const match = data[0];
+                if (!match.syncedLyrics) return null;
+                
+                return parseLRC(match.syncedLyrics);
+            } catch (error) {
+                console.error('Erro ao buscar letras LRCLib:', error);
+                return null;
+            }
+        }
+
+        // Buscar letras por proxy backend com fallback para Genius
+        async function fetchLyricsFromGenius(artist, track) {
+            try {
+                const response = await fetch(`/api/lyrics/fallback?artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}`);
+                
+                if (!response.ok) return null;
+                
+                const data = await response.json();
+                if (!data.lyrics) return null;
+                
+                const lines = data.lyrics.split('\n')
+                    .filter(l => l.trim().length > 0)
+                    .map(l => ({ time: 0, text: l.trim() }));
+
+                if (!lines.length) {
+                    return null;
+                }
+                
+                const approximateDuration = spotifyTotalTime || 240000;
+                const timePerLine = approximateDuration / lines.length;
+                
+                return lines.map((line, index) => ({
+                    time: index * timePerLine,
+                    text: line.text
+                }));
+            } catch (error) {
+                console.error('Erro ao buscar letras Genius:', error);
+                return null;
+            }
+        }
+
+        // Buscar letras (LRCLib → Genius → Não disponível)
+        async function fetchAndDisplayLyrics(artist, track, trackUri) {
+            const identifier = `${artist}|${track}`;
+            
+            if (identifier === currentTrackIdentifier && currentLyrics.length > 0) {
+                return;
+            }
+
+            currentTrackUri = trackUri || '';
+            
+            currentTrackIdentifier = identifier;
+            spotifyLyricsContent.innerHTML = '<div class="todo-empty" style="padding: 2rem 0;">Carregando letras...</div>';
+
+            const cached = readCachedLyrics(artist, track);
+            if (cached?.lyrics?.length) {
+                currentLyrics = cached.lyrics;
+                currentLyricsIndex = -1;
+                updateLyricsDisplay(spotifyCurrentTime);
+                return;
+            }
+            
+            let lyrics = await fetchLyricsFromLRCLib(artist, track);
+            let source = 'lrclib';
+            
+            if (!lyrics) {
+                lyrics = await fetchLyricsFromGenius(artist, track);
+                source = 'genius';
+            }
+            
+            if (!lyrics || lyrics.length === 0) {
+                resetLyricsState('Letras não disponíveis para esta música');
+                return;
+            }
+            
+            currentLyrics = lyrics;
+            currentLyricsIndex = -1;
+            cacheLyrics(artist, track, lyrics, source);
+            updateLyricsDisplay(spotifyCurrentTime);
+        }
+
+        function renderLyricsWindow(activeIndex) {
+            spotifyLyricsContent.innerHTML = '';
+
+            if (!currentLyrics.length) {
+                return;
+            }
+
+            const safeIndex = activeIndex < 0 ? 0 : activeIndex;
+            const start = Math.max(0, safeIndex - 2);
+            const end = Math.min(currentLyrics.length - 1, safeIndex + 2);
+
+            for (let visibleIndex = start; visibleIndex <= end; visibleIndex++) {
+                const lineEl = document.createElement('div');
+                const isActive = visibleIndex === activeIndex;
+                lineEl.className = `spotify-lyric-line${isActive ? ' active' : ''}`;
+                lineEl.dataset.index = visibleIndex;
+                lineEl.textContent = currentLyrics[visibleIndex].text;
+                spotifyLyricsContent.appendChild(lineEl);
+            }
+
+            while (spotifyLyricsContent.children.length < 5) {
+                const filler = document.createElement('div');
+                filler.className = 'spotify-lyric-line ghost';
+                filler.textContent = '.';
+                spotifyLyricsContent.appendChild(filler);
+            }
+        }
+
+        function updateLyricsDisplay(currentTimeMs) {
+            if (currentLyrics.length === 0) return;
+            
+            let newIndex = -1;
+            for (let i = 0; i < currentLyrics.length; i++) {
+                if (currentLyrics[i].time <= currentTimeMs) {
+                    newIndex = i;
+                } else {
+                    break;
+                }
+            }
+
+            const hasRenderedWindow = spotifyLyricsContent.querySelector('.spotify-lyric-line');
+            if (newIndex !== currentLyricsIndex || !hasRenderedWindow) {
+                currentLyricsIndex = newIndex;
+                renderLyricsWindow(newIndex);
+                spotifyLyricsContent.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function setupLyricsSync() {
+            if (lyricsUpdateInterval) clearInterval(lyricsUpdateInterval);
+            
+            lyricsUpdateInterval = setInterval(() => {
+                updateLyricsDisplay(spotifyCurrentTime);
+            }, 120);
+        }
+
+        function stopLyricsSync() {
+            if (lyricsUpdateInterval) {
+                clearInterval(lyricsUpdateInterval);
+                lyricsUpdateInterval = null;
+            }
+        }
+
+        async function maybeAdvanceToNextQueuedTrack() {
+            if (queueAdvanceLocked || isSeekingSpotify || spotifyQueue.length === 0 || spotifyTotalTime <= 0) {
+                return;
+            }
+
+            if (spotifyCurrentTime < spotifyTotalTime - 900) {
+                return;
+            }
+
+            queueAdvanceLocked = true;
+            await playNextQueueTrack();
+            setTimeout(() => {
+                queueAdvanceLocked = false;
+            }, 1200);
+        }
 
         // Gerar string aleatória para PKCE
         function generateRandomString(length) {
@@ -3131,17 +3647,21 @@
             const track = spotifyQueue[index];
             if (!track) return;
 
-            await playTrack(track.uri);
-            spotifyQueue.splice(index, 1);
-            saveSpotifyQueue();
+            const didStart = await playTrack(track.uri);
+            if (didStart) {
+                spotifyQueue.splice(index, 1);
+                saveSpotifyQueue();
+            }
         }
 
         async function playNextQueueTrack() {
             if (spotifyQueue.length === 0) return;
             const track = spotifyQueue[0];
-            await playTrack(track.uri);
-            spotifyQueue.shift();
-            saveSpotifyQueue();
+            const didStart = await playTrack(track.uri);
+            if (didStart) {
+                spotifyQueue.shift();
+                saveSpotifyQueue();
+            }
         }
 
         function buildTrackObject(item) {
@@ -3301,6 +3821,19 @@
             setSpotifyFeedback('Resultados carregados. Escolha uma música ou álbum.', 'success');
         }
 
+        function syncActiveTrackContext(track, progressMs = 0) {
+            const nextTrackUri = track?.uri || '';
+            if (nextTrackUri && nextTrackUri !== currentTrackUri) {
+                currentTrackUri = nextTrackUri;
+                queueAdvanceLocked = false;
+            }
+
+            const artist = track?.artists?.[0]?.name || 'Unknown';
+            fetchAndDisplayLyrics(artist, track.name, nextTrackUri);
+            updateLyricsDisplay(progressMs);
+            setupLyricsSync();
+        }
+
         async function playTrack(uri) {
             const body = { uris: [uri] };
             const endpoint = spotifyDeviceId ? `/me/player/play?device_id=${spotifyDeviceId}` : '/me/player/play';
@@ -3312,12 +3845,14 @@
                 if (res && res.status === 404) {
                     alert('Dispositivo Spotify ativo não encontrado. Abra o Spotify no seu computador/celular, comece a tocar uma música e tente novamente.');
                 }
-                return;
+                return false;
             }
 
-            removeTrackFromQueue(uri);
+            currentTrackUri = uri;
+            queueAdvanceLocked = false;
             setSpotifyFeedback('Reproduzindo música. Atualizando o player...', 'success');
             setTimeout(fetchSpotifyPlayback, 600);
+            return true;
         }
 
         // Carregar o SDK de reprodução direta na aba do Spotify
@@ -3383,6 +3918,13 @@
 
                 isSpotifyPlaying = !state.paused;
 
+                // Atualiza o progresso da música
+                if (track.duration_ms) {
+                    updateProgressUI(state.position || 0, track.duration_ms);
+                }
+
+                syncActiveTrackContext(track, state.position || 0);
+
                 if (isSpotifyPlaying) {
                     spotifyPlayIcon.innerHTML = `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
                     spotifyTrackImg.style.transform = 'scale(1.05)';
@@ -3421,6 +3963,22 @@
                     fetchSpotifyPlayback();
                     spotifyPollInterval = setInterval(fetchSpotifyPlayback, 5000); // Polling a cada 5s
                 }
+
+                // Atualizar progresso em tempo real
+                if (spotifyProgressInterval) clearInterval(spotifyProgressInterval);
+                spotifyProgressInterval = setInterval(() => {
+                    if (isSpotifyPlaying && spotifyTotalTime > 0) {
+                        spotifyCurrentTime += 200; // Incrementa 200ms
+                        if (spotifyCurrentTime >= spotifyTotalTime) {
+                            spotifyCurrentTime = spotifyTotalTime;
+                        }
+                        if (!isSeekingSpotify) {
+                            spotifyCurrentTimeLabel.textContent = formatTime(spotifyCurrentTime);
+                            spotifyProgressSlider.value = (spotifyCurrentTime / spotifyTotalTime) * 100;
+                        }
+                        maybeAdvanceToNextQueuedTrack();
+                    }
+                }, 200);
             } else {
                 spotifyDisconnectedArea.style.display = 'flex';
                 spotifyConnectedArea.style.display = 'none';
@@ -3451,6 +4009,10 @@
                 spotifyPlayIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"/>`;
                 isSpotifyPlaying = false;
                 activeSpotifyDevice = null;
+                queueAdvanceLocked = false;
+                updateProgressUI(0, 0);
+                stopLyricsSync();
+                resetLyricsState();
                 return;
             }
 
@@ -3462,8 +4024,20 @@
                 spotifyTrackImg.src = track.album.images[0].url;
             }
 
+            // Buscar letras da música
+            const artist = track.artists[0]?.name || 'Unknown';
+            fetchAndDisplayLyrics(artist, track.name, track.uri);
+            setupLyricsSync();
+
             isSpotifyPlaying = data.is_playing;
             activeSpotifyDevice = data.device;
+
+            // Atualiza o progresso da música
+            if (track.duration_ms) {
+                updateProgressUI(data.progress_ms || 0, track.duration_ms);
+            }
+
+            syncActiveTrackContext(track, data.progress_ms || 0);
 
             if (isSpotifyPlaying) {
                 spotifyPlayIcon.innerHTML = `<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>`;
