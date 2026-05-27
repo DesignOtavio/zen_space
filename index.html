@@ -1393,6 +1393,39 @@
             margin-top: auto;
         }
 
+        .spotify-feedback-message {
+            margin: 1rem 0 0;
+            padding: 0.9rem 1rem;
+            border-radius: 1rem;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            min-height: 2.4rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: background 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        }
+
+        .spotify-feedback-message.success {
+            background: rgba(29, 185, 84, 0.12);
+            border-color: rgba(29, 185, 84, 0.18);
+            color: #d2f5d1;
+        }
+
+        .spotify-feedback-message.error {
+            background: rgba(239, 68, 68, 0.12);
+            border-color: rgba(239, 68, 68, 0.18);
+            color: #ffd5d5;
+        }
+
+        .spotify-feedback-message.info {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.12);
+            color: var(--text-secondary);
+        }
+
         .spotify-status-indicator {
             display: flex;
             align-items: center;
@@ -1881,6 +1914,22 @@
                                     no Spotify</div>
                             </div>
                         </div>
+
+                        <!-- Painel de Fila de Reprodução -->
+                        <div class="spotify-queue-panel">
+                            <div class="card-title">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                    <path d="M3 7h14M3 12h10M3 17h18" />
+                                    <path d="M19 5l4 4-4 4" />
+                                </svg>
+                                Fila de Reprodução
+                            </div>
+                            <div class="spotify-search-results" id="spotify-queue-list">
+                                <div class="todo-empty" style="padding: 1.5rem 0;">A fila está vazia. Adicione músicas para começar.</div>
+                            </div>
+                        </div>
+
+                        <div id="spotify-feedback" class="spotify-feedback-message info">Status do Spotify será exibido aqui.</div>
 
                         <!-- Rodapé do Widget conectado -->
                         <div class="spotify-status-bar" style="grid-column: 1 / -1;">
@@ -2731,10 +2780,20 @@
 
         const spotifySearchInput = document.getElementById('spotify-search-input');
         const spotifySearchResults = document.getElementById('spotify-search-results');
+        const spotifyQueueList = document.getElementById('spotify-queue-list');
+        const spotifyFeedback = document.getElementById('spotify-feedback');
+
+        let searchTimeout = null;
+        spotifySearchInput.addEventListener('input', () => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(executeSpotifySearch, 350);
+        });
 
         let spotifyPollInterval = null;
         let isSpotifyPlaying = false;
         let activeSpotifyDevice = null;
+        let spotifyQueue = JSON.parse(localStorage.getItem('spotify-queue') || '[]');
+        const spotifyFallbackImage = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><rect width="100%" height="100%" fill="%23222"/></svg>';
 
 
         // Gerar string aleatória para PKCE
@@ -2999,6 +3058,268 @@
             }
         }
 
+        function setSpotifyFeedback(message, type = 'info') {
+            if (!spotifyFeedback) return;
+            spotifyFeedback.textContent = message;
+            spotifyFeedback.classList.remove('success', 'error', 'info');
+            spotifyFeedback.classList.add(type);
+        }
+
+        function saveSpotifyQueue() {
+            localStorage.setItem('spotify-queue', JSON.stringify(spotifyQueue));
+            renderSpotifyQueue();
+            setSpotifyFeedback(`Fila atualizada. ${spotifyQueue.length} música(s) na fila.`, 'success');
+        }
+
+        function renderSpotifyQueue() {
+            if (!spotifyQueue || spotifyQueue.length === 0) {
+                spotifyQueueList.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">A fila está vazia. Adicione músicas para começar.</div>`;
+                setSpotifyFeedback('A fila está vazia. Adicione músicas para atualizar a fila.', 'info');
+                return;
+            }
+
+            spotifyQueueList.innerHTML = '';
+            spotifyQueue.forEach((track, index) => {
+                const item = document.createElement('div');
+                item.className = 'spotify-search-item';
+                item.innerHTML = `
+                    <img class="spotify-search-img" src="${track.image}" alt="Capa" />
+                    <div class="spotify-search-meta">
+                        <div class="spotify-search-name">${track.name}</div>
+                        <div class="spotify-search-artist">${track.artists}</div>
+                        <div class="spotify-search-artist" style="font-size:0.72rem;color:var(--text-secondary);">${track.album}</div>
+                    </div>
+                    <div style="display:flex;gap:0.4rem;align-items:center;">
+                        <button class="spotify-ctrl-btn" title="Tocar agora" data-queue-play="${index}" style="width:auto;padding:0.45rem 0.75rem;font-size:0.72rem;">Tocar</button>
+                        <button class="spotify-ctrl-btn" title="Remover da fila" data-queue-remove="${index}" style="width:auto;padding:0.45rem 0.75rem;font-size:0.72rem;color:#ef4444;border-color:rgba(239,68,68,0.2);">Remover</button>
+                    </div>
+                `;
+                spotifyQueueList.appendChild(item);
+            });
+
+            spotifyQueueList.querySelectorAll('[data-queue-play]').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    const index = parseInt(e.target.getAttribute('data-queue-play'), 10);
+                    await playQueueItem(index);
+                });
+            });
+
+            spotifyQueueList.querySelectorAll('[data-queue-remove]').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const index = parseInt(e.target.getAttribute('data-queue-remove'), 10);
+                    spotifyQueue.splice(index, 1);
+                    saveSpotifyQueue();
+                });
+            });
+        }
+
+        function addTrackToQueue(track) {
+            spotifyQueue.push(track);
+            saveSpotifyQueue();
+            setSpotifyFeedback(`'${track.name}' adicionada à fila.`, 'success');
+            if (!isSpotifyPlaying && spotifyQueue.length === 1) {
+                playNextQueueTrack();
+            }
+        }
+
+        function removeTrackFromQueue(uri) {
+            spotifyQueue = spotifyQueue.filter(track => track.uri !== uri);
+            saveSpotifyQueue();
+        }
+
+        async function playQueueItem(index) {
+            const track = spotifyQueue[index];
+            if (!track) return;
+
+            await playTrack(track.uri);
+            spotifyQueue.splice(index, 1);
+            saveSpotifyQueue();
+        }
+
+        async function playNextQueueTrack() {
+            if (spotifyQueue.length === 0) return;
+            const track = spotifyQueue[0];
+            await playTrack(track.uri);
+            spotifyQueue.shift();
+            saveSpotifyQueue();
+        }
+
+        function buildTrackObject(item) {
+            return {
+                uri: item.uri,
+                id: item.id,
+                name: item.name,
+                artists: item.artists.map(a => a.name).join(', '),
+                album: item.album?.name || '',
+                image: item.album?.images?.[0]?.url || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 36 36"><rect width="100%" height="100%" fill="%23222"/></svg>'
+            };
+        }
+
+        function renderSearchItem(track) {
+            const item = document.createElement('div');
+            item.className = 'spotify-search-item';
+            const img = track.album?.images?.[0]?.url || spotifyFallbackImage;
+            item.innerHTML = `
+                <img class="spotify-search-img" src="${img}" alt="Álbum">
+                <div class="spotify-search-meta">
+                    <div class="spotify-search-name">${track.name}</div>
+                    <div class="spotify-search-artist">${track.artists.map(a => a.name).join(', ')}</div>
+                    <div class="spotify-search-artist" style="font-size:0.72rem;color:var(--text-secondary);">${track.album.name}</div>
+                </div>
+                <div style="display:flex;gap:0.4rem;align-items:center;">
+                    <button class="spotify-ctrl-btn" title="Tocar agora" data-play-track="${track.uri}" style="width:auto;padding:0.45rem 0.75rem;font-size:0.72rem;">Tocar</button>
+                    <button class="spotify-ctrl-btn" title="Adicionar à fila" data-add-queue="${track.uri}" style="width:auto;padding:0.45rem 0.75rem;font-size:0.72rem;">Fila</button>
+                </div>
+            `;
+            item.querySelector('[data-play-track]').addEventListener('click', async (e) => {
+                await playTrack(track.uri);
+            });
+            item.querySelector('[data-add-queue]').addEventListener('click', () => {
+                addTrackToQueue(buildTrackObject(track));
+            });
+            return item;
+        }
+
+        function renderAlbumItem(album) {
+            const item = document.createElement('div');
+            item.className = 'spotify-search-item';
+            const img = album.images?.[0]?.url || spotifyFallbackImage;
+            item.innerHTML = `
+                <img class="spotify-search-img" src="${img}" alt="Álbum">
+                <div class="spotify-search-meta">
+                    <div class="spotify-search-name">${album.name}</div>
+                    <div class="spotify-search-artist">${album.artists.map(a => a.name).join(', ')}</div>
+                    <div class="spotify-search-artist" style="font-size:0.72rem;color:var(--text-secondary);">Álbum • ${album.total_tracks} faixas</div>
+                </div>
+                <div style="display:flex;gap:0.4rem;align-items:center;">
+                    <button class="spotify-ctrl-btn" title="Ver faixas do álbum" data-view-album="${album.id}" style="width:auto;padding:0.45rem 0.75rem;font-size:0.72rem;">Ver faixas</button>
+                </div>
+            `;
+            item.querySelector('[data-view-album]').addEventListener('click', () => {
+                fetchAlbumTracks(album);
+            });
+            return item;
+        }
+
+        async function fetchAlbumTracks(album) {
+            spotifySearchResults.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">Carregando faixas do álbum...</div>`;
+            setSpotifyFeedback(`Carregando faixas do álbum '${album.name}'...`, 'info');
+            const data = await spotifyApiFetch(`/albums/${album.id}/tracks?limit=50`);
+            if (!data || !data.items) {
+                spotifySearchResults.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">Não foi possível carregar as faixas do álbum.</div>`;
+                setSpotifyFeedback('Erro: não foi possível carregar as faixas do álbum.', 'error');
+                return;
+            }
+
+            spotifySearchResults.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;margin-bottom:0.75rem;">
+                    <div style="font-size:0.92rem;color:var(--text-primary);font-weight:600;">Faixas do álbum: ${album.name}</div>
+                    <button class="spotify-ctrl-btn" id="spotify-back-to-search" style="width:auto;padding:0.45rem 0.75rem;font-size:0.72rem;">Voltar</button>
+                </div>
+            `;
+
+            data.items.forEach(track => {
+                const item = document.createElement('div');
+                item.className = 'spotify-search-item';
+                const img = album.images?.[0]?.url || spotifyFallbackImage;
+                item.innerHTML = `
+                    <img class="spotify-search-img" src="${img}" alt="Álbum">
+                    <div class="spotify-search-meta">
+                        <div class="spotify-search-name">${track.name}</div>
+                        <div class="spotify-search-artist">${track.artists.map(a => a.name).join(', ')}</div>
+                    </div>
+                    <div style="display:flex;gap:0.4rem;align-items:center;">
+                        <button class="spotify-ctrl-btn" title="Tocar agora" data-play-track="${track.uri}" style="width:auto;padding:0.45rem 0.75rem;font-size:0.72rem;">Tocar</button>
+                        <button class="spotify-ctrl-btn" title="Adicionar à fila" data-add-queue="${track.uri}" style="width:auto;padding:0.45rem 0.75rem;font-size:0.72rem;">Fila</button>
+                    </div>
+                `;
+                item.querySelector('[data-play-track]').addEventListener('click', async () => {
+                    await playTrack(track.uri);
+                });
+                item.querySelector('[data-add-queue]').addEventListener('click', () => {
+                    addTrackToQueue(buildTrackObject({
+                        uri: track.uri,
+                        id: track.id,
+                        name: track.name,
+                        artists: track.artists,
+                        album: { name: album.name, images: album.images }
+                    }));
+                });
+                spotifySearchResults.appendChild(item);
+            });
+
+            document.getElementById('spotify-back-to-search').addEventListener('click', executeSpotifySearch);
+        }
+
+        async function executeSpotifySearch() {
+            const query = spotifySearchInput.value.trim();
+            if (!query) {
+                spotifySearchResults.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">Escreva acima para pesquisar faixas no Spotify</div>`;
+                setSpotifyFeedback('Digite algo para buscar no Spotify.', 'info');
+                return;
+            }
+
+            setSpotifyFeedback(`Buscando por '${query}'...`, 'info');
+            spotifySearchResults.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">Buscando resultados...</div>`;
+            const data = await spotifyApiFetch(`/search?q=${encodeURIComponent(query)}&type=track,album&limit=5`);
+            if (!data) {
+                spotifySearchResults.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">Erro ao buscar resultados. Tente novamente.</div>`;
+                setSpotifyFeedback('Erro ao buscar resultados do Spotify.', 'error');
+                return;
+            }
+
+            const albums = data.albums?.items || [];
+            const tracks = data.tracks?.items || [];
+            if (albums.length === 0 && tracks.length === 0) {
+                spotifySearchResults.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">Nenhum resultado encontrado</div>`;
+                setSpotifyFeedback('Nenhum resultado encontrado para sua busca.', 'info');
+                return;
+            }
+
+            spotifySearchResults.innerHTML = '';
+            if (albums.length > 0) {
+                const section = document.createElement('div');
+                section.style.display = 'flex';
+                section.style.flexDirection = 'column';
+                section.style.gap = '0.5rem';
+                section.innerHTML = `<div style="font-size:0.9rem;color:var(--text-secondary);font-weight:600;">Álbuns encontrados</div>`;
+                albums.forEach(album => section.appendChild(renderAlbumItem(album)));
+                spotifySearchResults.appendChild(section);
+            }
+
+            if (tracks.length > 0) {
+                const section = document.createElement('div');
+                section.style.display = 'flex';
+                section.style.flexDirection = 'column';
+                section.style.gap = '0.5rem';
+                section.style.marginTop = '1rem';
+                section.innerHTML = `<div style="font-size:0.9rem;color:var(--text-secondary);font-weight:600;">Faixas encontradas</div>`;
+                tracks.forEach(track => section.appendChild(renderSearchItem(track)));
+                spotifySearchResults.appendChild(section);
+            }
+
+            setSpotifyFeedback('Resultados carregados. Escolha uma música ou álbum.', 'success');
+        }
+
+        async function playTrack(uri) {
+            const body = { uris: [uri] };
+            const endpoint = spotifyDeviceId ? `/me/player/play?device_id=${spotifyDeviceId}` : '/me/player/play';
+            const res = await spotifyApiFetch(endpoint, 'PUT', body);
+
+            if (!res || res.error) {
+                const message = res?.message || 'Não foi possível reproduzir a faixa. Verifique a conexão com o Spotify.';
+                setSpotifyFeedback(message, 'error');
+                if (res && res.status === 404) {
+                    alert('Dispositivo Spotify ativo não encontrado. Abra o Spotify no seu computador/celular, comece a tocar uma música e tente novamente.');
+                }
+                return;
+            }
+
+            removeTrackFromQueue(uri);
+            setSpotifyFeedback('Reproduzindo música. Atualizando o player...', 'success');
+            setTimeout(fetchSpotifyPlayback, 600);
+        }
+
         // Carregar o SDK de reprodução direta na aba do Spotify
         let spotifyPlayer = null;
         let spotifyDeviceId = null;
@@ -3249,62 +3570,8 @@
             };
         })();
 
-        // Pesquisa de músicas (Debounce)
-        let searchTimeout = null;
-        spotifySearchInput.addEventListener('input', () => {
-            clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(executeSpotifySearch, 400);
-        });
-
-        async function executeSpotifySearch() {
-            const query = spotifySearchInput.value.trim();
-            if (!query) {
-                spotifySearchResults.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">Escreva acima para pesquisar faixas no Spotify</div>`;
-                return;
-            }
-
-            const data = await spotifyApiFetch(`/search?q=${encodeURIComponent(query)}&type=track&limit=5`);
-            if (!data || !data.tracks) return;
-
-            const tracks = data.tracks.items;
-            if (tracks.length === 0) {
-                spotifySearchResults.innerHTML = `<div class="todo-empty" style="padding: 1.5rem 0;">Nenhum resultado encontrado</div>`;
-                return;
-            }
-
-            spotifySearchResults.innerHTML = '';
-            tracks.forEach(t => {
-                const item = document.createElement('div');
-                item.className = 'spotify-search-item';
-                item.addEventListener('click', () => playTrack(t.uri));
-
-                const imgUrl = t.album.images.length > 0 ? t.album.images[0].url : 'data:image/svg+xml;utf8,<rect width="36" height="36" fill="%23222"/>';
-                const artists = t.artists.map(a => a.name).join(', ');
-
-                item.innerHTML = `
-          <img class="spotify-search-img" src="${imgUrl}" alt="Álbum">
-          <div class="spotify-search-meta">
-            <div class="spotify-search-name">${t.name}</div>
-            <div class="spotify-search-artist">${artists}</div>
-          </div>
-        `;
-                spotifySearchResults.appendChild(item);
-            });
-        }
-
-        async function playTrack(uri) {
-            const body = { uris: [uri] };
-            const endpoint = spotifyDeviceId ? `/me/player/play?device_id=${spotifyDeviceId}` : '/me/player/play';
-            const res = await spotifyApiFetch(endpoint, 'PUT', body);
-
-            if (res && res.error && res.status === 404) {
-                alert('Dispositivo Spotify ativo não encontrado. Abra o Spotify no seu computador/celular, comece a tocar uma música e tente novamente.');
-            } else {
-                setTimeout(fetchSpotifyPlayback, 600);
-            }
-        }
-
-        // Inicialização da verificação de login
+        // Inicialização da fila local e verificação de login
+        renderSpotifyQueue();
         checkSpotifyCallback();
         updateSpotifyUI();
 
