@@ -1,3 +1,3 @@
 FROM nginx:alpine
-RUN rm -rf /usr/share/nginx/index/*
-COPY . /usr/share/nginx/index
+RUN rm -rf /usr/share/nginx/html/*
+COPY . /usr/share/nginx/html
